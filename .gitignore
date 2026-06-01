@@ -1,0 +1,65 @@
+# ─── Android Build Outputs ─────────────────────────────────────────────────
+/build/
+app/build/
+**/build/
+
+# ─── Gradle ────────────────────────────────────────────────────────────────
+.gradle/
+!gradle/wrapper/gradle-wrapper.properties
+
+# ─── Android Studio / IntelliJ IDEA ────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ─── Kotlin Tooling Cache ──────────────────────────────────────────────────
+.kotlin/
+
+# ─── Local SDK & Signing Config ────────────────────────────────────────────
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.pk8
+*.p12
+
+# ─── APK / AAB Artifacts ───────────────────────────────────────────────────
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ─── ProGuard / R8 Mapping ─────────────────────────────────────────────────
+*.map
+
+# ─── Generated Source & Assets ─────────────────────────────────────────────
+gen/
+generated/
+out/
+.externalNativeBuild/
+.cxx/
+
+# ─── JVM & Android Crash Dumps ─────────────────────────────────────────────
+*.hprof
+java_pid*.hprof
+hs_err_pid*.log
+
+# ─── Android Profiler Captures ─────────────────────────────────────────────
+/captures/
+
+# ─── Room Schema Export ────────────────────────────────────────────────────
+app/schemas/
+
+# ─── Test & Coverage Reports ───────────────────────────────────────────────
+test-results/
+jacoco/
+coverage/
+
+# ─── OS-specific Files ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Claude Session Snapshots (keep CLAUDE.md project instructions) ─────────
+CLAUDE_0*.md
