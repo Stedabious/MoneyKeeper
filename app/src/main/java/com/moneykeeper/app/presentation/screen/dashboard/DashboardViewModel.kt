@@ -1,5 +1,8 @@
 package com.moneykeeper.app.presentation.screen.dashboard
 
+import android.content.Context
+import android.os.PowerManager
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.moneykeeper.app.data.repository.CategoryRepository
@@ -9,6 +12,7 @@ import com.moneykeeper.app.domain.model.Category
 import com.moneykeeper.app.domain.model.Transaction
 import com.moneykeeper.app.domain.model.TransactionType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +39,8 @@ data class DashboardUiState(
     val trashCount: Int = 0,
     val selectedDate: Long = startOfDay(System.currentTimeMillis()),
     val isToday: Boolean = true,
+    val isNotificationListenerGranted: Boolean = true,
+    val isBatteryOptimizationIgnored: Boolean = true,
 )
 
 internal fun startOfDay(millis: Long): Long {
@@ -70,14 +76,17 @@ private fun monthRange(millis: Long): Pair<Long, Long> {
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val transactionRepository: TransactionRepository,
     private val pendingEventRepository: PendingEventRepository,
     private val categoryRepository: CategoryRepository,
 ) : ViewModel() {
 
     private val _selectedDate = MutableStateFlow(startOfDay(System.currentTimeMillis()))
+    private val _isNLSGranted = MutableStateFlow(true)
+    private val _isBattOptIgnored = MutableStateFlow(true)
 
-    val uiState: StateFlow<DashboardUiState> = combine(
+    private val innerUiState = combine(
         combine(
             _selectedDate.flatMapLatest { date ->
                 transactionRepository.getRealByDateRange(date, endOfDay(date))
@@ -111,12 +120,31 @@ class DashboardViewModel @Inject constructor(
             selectedDate = date,
             isToday = date == startOfDay(System.currentTimeMillis()),
         )
+    }
+
+    val uiState: StateFlow<DashboardUiState> = combine(
+        innerUiState,
+        _isNLSGranted,
+        _isBattOptIgnored,
+    ) { state, nlsGranted, battOptIgnored ->
+        state.copy(
+            isNotificationListenerGranted = nlsGranted,
+            isBatteryOptimizationIgnored = battOptIgnored,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
     init {
         viewModelScope.launch {
             transactionRepository.cleanOldTrash(System.currentTimeMillis() - DAY_MS)
         }
+        refreshPermissionStatus()
+    }
+
+    fun refreshPermissionStatus() {
+        _isNLSGranted.value = NotificationManagerCompat.getEnabledListenerPackages(context)
+            .contains(context.packageName)
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        _isBattOptIgnored.value = pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun onPreviousDay() {

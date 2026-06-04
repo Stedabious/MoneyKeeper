@@ -1,10 +1,14 @@
 package com.moneykeeper.app.presentation.screen.dashboard
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BasicAlertDialog
@@ -44,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,11 +61,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.moneykeeper.app.domain.model.Transaction
 import com.moneykeeper.app.domain.model.TransactionType
 import java.text.NumberFormat
@@ -85,10 +95,18 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val amountFormat = NumberFormat.getNumberInstance(Locale.US)
     val dateFormat   = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
     val monthFormat  = SimpleDateFormat("yyyy年M月", Locale.getDefault())
     var showMonthPicker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshPermissionStatus()
+        }
+    }
 
     if (showMonthPicker) {
         val cal = Calendar.getInstance().apply { timeInMillis = state.selectedDate }
@@ -143,6 +161,22 @@ fun DashboardScreen(
                 .padding(padding)
                 .fillMaxSize(),
         ) {
+            // 權限警告 Banner
+            PermissionWarningBanner(
+                isNLSGranted = state.isNotificationListenerGranted,
+                isBattOptIgnored = state.isBatteryOptimizationIgnored,
+                onOpenNLSSettings = {
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                },
+                onOpenBatterySettings = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                    )
+                },
+            )
+
             // ── 上方總結 40% ─────────────────────────────────────────────
             Column(
                 modifier = Modifier
@@ -280,6 +314,86 @@ fun DashboardScreen(
 }
 
 @Composable
+private fun PermissionWarningBanner(
+    isNLSGranted: Boolean,
+    isBattOptIgnored: Boolean,
+    onOpenNLSSettings: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+) {
+    if (isNLSGranted && isBattOptIgnored) return
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (!isNLSGranted) {
+                WarningRow(
+                    text = "通知監聽未授權，無法自動記帳",
+                    actionText = "前往設定",
+                    onClick = onOpenNLSSettings,
+                )
+            }
+            if (!isBattOptIgnored) {
+                WarningRow(
+                    text = "電池優化未關閉，可能中斷背景接收",
+                    actionText = "關閉優化",
+                    onClick = onOpenBatterySettings,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WarningRow(
+    text: String,
+    actionText: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = Color(0xFFE65100),
+                modifier = Modifier.size(15.dp),
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF5D4037),
+            )
+        }
+        TextButton(
+            onClick = onClick,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+        ) {
+            Text(
+                actionText,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFE65100),
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun CompactPieChart(
     breakdown: List<CategoryBreakdown>,
     amountFormat: NumberFormat,
@@ -315,7 +429,7 @@ private fun CompactPieChart(
                 }
             }
             Spacer(Modifier.width(14.dp))
-            // 圖例 (最多5項，2欄)
+            // 圖例 (最多5項)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),

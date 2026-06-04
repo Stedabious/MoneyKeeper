@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -138,167 +140,166 @@ fun AddTransactionScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.padding(padding).fillMaxSize()) {
+            val numpadH = maxHeight * 0.28f
 
-            // ── 收入/支出 切換 + 金額顯示 ─────────────────────────────
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(amountBg)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-            ) {
-                // 類型切換 pill
-                TypeToggle(
-                    isIncome = isIncome,
-                    onExpense = { viewModel.onTransactionTypeChanged(TransactionType.EXPENSE) },
-                    onIncome  = { viewModel.onTransactionTypeChanged(TransactionType.INCOME) },
-                )
+            Column(modifier = Modifier.fillMaxSize()) {
 
-                Spacer(Modifier.height(12.dp))
-
-                // 金額顯示
+                // ── 收入/支出 切換 + 金額顯示（縮小版）─────────────────
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.End,
-                ) {
-                    if (state.pendingOp != null) {
-                        Text(
-                            text = "${state.storedValue?.let { formatDisplay(it) }.orEmpty()} ${state.pendingOp}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = amountColor.copy(alpha = 0.6f),
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        Text(
-                            text = if (isIncome) "+" else "−",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = amountColor,
-                            modifier = Modifier.padding(bottom = 4.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "NT$",
-                            fontSize = 18.sp,
-                            color = amountColor.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = state.displayAmount,
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = amountColor,
-                        )
-                    }
-                }
-            }
-
-            // ── 表單 ────────────────────────────────────────────────────
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                OutlinedTextField(
-                    value = state.merchant,
-                    onValueChange = viewModel::onMerchantChanged,
-                    label = { Text(if (isIncome) "來源（選填）" else "商家（選填）") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = state.note,
-                    onValueChange = viewModel::onNoteChanged,
-                    label = { Text("備注（選填）") },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // 類別
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "類別",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(categories, key = { it.id }) { cat ->
-                            CategoryChip(
-                                cat = cat,
-                                selected = cat.id == state.selectedCategoryId,
-                                onClick = { viewModel.onCategorySelected(cat.id) },
-                            )
-                        }
-                    }
-                }
-
-                // 日期
-                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { showDatePicker = true }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                        .background(amountBg)
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
+                    TypeToggle(
+                        isIncome = isIncome,
+                        onExpense = { viewModel.onTransactionTypeChanged(TransactionType.EXPENSE) },
+                        onIncome  = { viewModel.onTransactionTypeChanged(TransactionType.INCOME) },
+                    )
+                    Spacer(Modifier.height(6.dp))
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.End,
                     ) {
-                        Icon(
-                            Icons.Default.DateRange,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(20.dp),
+                        if (state.pendingOp != null) {
+                            Text(
+                                text = "${state.storedValue?.let { formatDisplay(it) }.orEmpty()} ${state.pendingOp}  ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = amountColor.copy(alpha = 0.6f),
+                            )
+                        }
+                        Text(
+                            text = if (isIncome) "+" else "−",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = amountColor,
                         )
-                        Text("日期", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline)
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            text = "NT$",
+                            fontSize = 12.sp,
+                            color = amountColor.copy(alpha = 0.7f),
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            text = state.displayAmount,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = amountColor,
+                        )
                     }
-                    Text(
-                        dateFormat.format(Date(state.transactionDate)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = amountColor,
-                        fontWeight = FontWeight.Medium,
+                }
+
+                // ── 表單（可滑動）────────────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    OutlinedTextField(
+                        value = state.merchant,
+                        onValueChange = viewModel::onMerchantChanged,
+                        label = { Text(if (isIncome) "來源（選填）" else "商家（選填）") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    // 類別
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "類別",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(categories, key = { it.id }) { cat ->
+                                CategoryChip(
+                                    cat = cat,
+                                    selected = cat.id == state.selectedCategoryId,
+                                    onClick = { viewModel.onCategorySelected(cat.id) },
+                                )
+                            }
+                        }
+                    }
+
+                    // 日期
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { showDatePicker = true }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text("日期", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Text(
+                            dateFormat.format(Date(state.transactionDate)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = amountColor,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    // 備注（置底）
+                    OutlinedTextField(
+                        value = state.note,
+                        onValueChange = viewModel::onNoteChanged,
+                        label = { Text("備注（選填）") },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
-                HorizontalDivider()
-            }
+                // ── 數字鍵盤（畫面 28%）──────────────────────────────────
+                NumpadGrid(
+                    onKey = viewModel::onNumpadKey,
+                    accentColor = amountColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(numpadH)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                )
 
-            // ── 數字鍵盤 ────────────────────────────────────────────────
-            NumpadGrid(
-                onKey = viewModel::onNumpadKey,
-                accentColor = amountColor,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            )
-
-            // ── 儲存 ────────────────────────────────────────────────────
-            Button(
-                onClick = viewModel::save,
-                enabled = state.displayAmount != "0" && !state.isSaving,
-                colors = ButtonDefaults.buttonColors(containerColor = amountColor),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
-                    .height(52.dp),
-            ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-                } else {
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (isEditMode) "更新記錄" else if (isIncome) "新增收入" else "新增支出",
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                // ── 儲存 ─────────────────────────────────────────────────
+                Button(
+                    onClick = viewModel::save,
+                    enabled = state.displayAmount != "0" && !state.isSaving,
+                    colors = ButtonDefaults.buttonColors(containerColor = amountColor),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .height(48.dp),
+                ) {
+                    if (state.isSaving) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                    } else {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isEditMode) "更新記錄" else if (isIncome) "新增收入" else "新增支出",
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             }
         }
@@ -319,14 +320,13 @@ private fun TypeToggle(
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
             .padding(3.dp),
     ) {
-        // 支出 pill
         Box(
             modifier = Modifier
                 .weight(1f)
                 .clip(CircleShape)
                 .background(if (!isIncome) ExpenseSelected else Color.Transparent)
                 .clickable(onClick = onExpense)
-                .padding(vertical = 9.dp),
+                .padding(vertical = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -336,14 +336,13 @@ private fun TypeToggle(
                 color = if (!isIncome) Color.White else MaterialTheme.colorScheme.outline,
             )
         }
-        // 收入 pill
         Box(
             modifier = Modifier
                 .weight(1f)
                 .clip(CircleShape)
                 .background(if (isIncome) IncomeSelected else Color.Transparent)
                 .clickable(onClick = onIncome)
-                .padding(vertical = 9.dp),
+                .padding(vertical = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -371,11 +370,7 @@ private fun CategoryChip(
         onClick = onClick,
         label = { Text(cat.name, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
         leadingIcon = {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .background(catColor, CircleShape)
-            )
+            Box(modifier = Modifier.size(10.dp).background(catColor, CircleShape))
         },
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = catColor.copy(alpha = 0.18f),
@@ -411,23 +406,29 @@ private fun NumpadGrid(
         listOf("1", "2", "3", "−"),
         listOf(".", "0", "00", "="),
     )
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
         rows.forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 row.forEach { key ->
                     val isOp = key in setOf("+", "−", "=", "⌫")
                     val actualKey = if (key == "−") "-" else key
                     if (isOp) {
                         FilledTonalButton(
                             onClick = { onKey(actualKey) },
-                            modifier = Modifier.weight(1f).height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = RoundedCornerShape(12.dp),
                         ) { Text(key, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) }
                     } else {
                         ElevatedButton(
                             onClick = { onKey(actualKey) },
-                            modifier = Modifier.weight(1f).height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            shape = RoundedCornerShape(12.dp),
                         ) { Text(key, style = MaterialTheme.typography.titleMedium) }
                     }
                 }
