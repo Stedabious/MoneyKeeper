@@ -35,6 +35,7 @@ data class DashboardUiState(
     val monthlyExpense: Double = 0.0,
     val monthlyIncome: Double = 0.0,
     val categoryBreakdown: List<CategoryBreakdown> = emptyList(),
+    val incomeCategoryBreakdown: List<CategoryBreakdown> = emptyList(),
     val pendingCount: Int = 0,
     val trashCount: Int = 0,
     val selectedDate: Long = startOfDay(System.currentTimeMillis()),
@@ -109,12 +110,12 @@ class DashboardViewModel @Inject constructor(
         val income = monthTx.filter { it.transactionType == TransactionType.INCOME }
         val monthlyExpense = expenses.sumOf { it.amount }
         val monthlyIncome = income.sumOf { it.amount }
-        val breakdown = buildBreakdown(expenses, cats)
         DashboardUiState(
             transactions = dayTx,
             monthlyExpense = monthlyExpense,
             monthlyIncome = monthlyIncome,
-            categoryBreakdown = breakdown,
+            categoryBreakdown = buildBreakdown(expenses, cats),
+            incomeCategoryBreakdown = buildBreakdown(income, cats),
             pendingCount = pending,
             trashCount = trash,
             selectedDate = date,

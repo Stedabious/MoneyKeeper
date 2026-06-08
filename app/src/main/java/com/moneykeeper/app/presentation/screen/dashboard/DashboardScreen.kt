@@ -57,10 +57,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -246,10 +245,13 @@ fun DashboardScreen(
                     }
                 }
 
-                // 圓餅圖
-                if (state.categoryBreakdown.isNotEmpty()) {
-                    CompactPieChart(
-                        breakdown = state.categoryBreakdown,
+                // 橫向長條圖
+                if (state.categoryBreakdown.isNotEmpty() || state.incomeCategoryBreakdown.isNotEmpty()) {
+                    CategoryBarChart(
+                        expenseBreakdown = state.categoryBreakdown,
+                        incomeBreakdown = state.incomeCategoryBreakdown,
+                        monthlyExpense = state.monthlyExpense,
+                        monthlyIncome = state.monthlyIncome,
                         amountFormat = amountFormat,
                     )
                 }
@@ -394,8 +396,11 @@ private fun WarningRow(
 }
 
 @Composable
-private fun CompactPieChart(
-    breakdown: List<CategoryBreakdown>,
+private fun CategoryBarChart(
+    expenseBreakdown: List<CategoryBreakdown>,
+    incomeBreakdown: List<CategoryBreakdown>,
+    monthlyExpense: Double,
+    monthlyIncome: Double,
     amountFormat: NumberFormat,
 ) {
     Card(
@@ -403,65 +408,144 @@ private fun CompactPieChart(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            if (expenseBreakdown.isNotEmpty()) {
+                BarSection(
+                    label = "支出",
+                    total = monthlyExpense,
+                    breakdown = expenseBreakdown,
+                    sectionColor = Color(0xFFD32F2F),
+                    sign = "−",
+                    amountFormat = amountFormat,
+                )
+            }
+            if (expenseBreakdown.isNotEmpty() && incomeBreakdown.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Spacer(Modifier.height(12.dp))
+            }
+            if (incomeBreakdown.isNotEmpty()) {
+                BarSection(
+                    label = "收入",
+                    total = monthlyIncome,
+                    breakdown = incomeBreakdown,
+                    sectionColor = Color(0xFF2E7D32),
+                    sign = "+",
+                    amountFormat = amountFormat,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BarSection(
+    label: String,
+    total: Double,
+    breakdown: List<CategoryBreakdown>,
+    sectionColor: Color,
+    sign: String,
+    amountFormat: NumberFormat,
+) {
+    val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+
+    // 總和列（第一排）
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = sectionColor,
+            modifier = Modifier.width(64.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(7.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(sectionColor),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "100%",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.width(32.dp),
+            textAlign = TextAlign.End,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            "$sign NT$${amountFormat.format(total)}",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = sectionColor,
+            modifier = Modifier.width(80.dp),
+            textAlign = TextAlign.End,
+        )
+    }
+
+    Spacer(Modifier.height(5.dp))
+
+    // 各類別列
+    breakdown.forEachIndexed { i, seg ->
+        val barColor = PIE_COLORS[i % PIE_COLORS.size]
+        Spacer(Modifier.height(4.dp))
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // 環形圖
-            Box(modifier = Modifier.size(80.dp)) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = size.minDimension * 0.22f
-                    val inset  = stroke / 2f
-                    var startAngle = -90f
-                    breakdown.forEachIndexed { i, seg ->
-                        val sweep = seg.fraction * 360f
-                        drawArc(
-                            color = PIE_COLORS[i % PIE_COLORS.size],
-                            startAngle = startAngle,
-                            sweepAngle = sweep - 1f,
-                            useCenter = false,
-                            topLeft = Offset(inset / 2f, inset / 2f),
-                            size = Size(size.width - stroke, size.height - stroke),
-                            style = Stroke(width = stroke),
-                        )
-                        startAngle += sweep
-                    }
-                }
-            }
-            Spacer(Modifier.width(14.dp))
-            // 圖例 (最多5項)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+            // 色點 + 類別名稱
+            Row(
+                modifier = Modifier.width(64.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                breakdown.take(5).forEachIndexed { i, seg ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        Canvas(modifier = Modifier.size(8.dp)) {
-                            drawCircle(color = PIE_COLORS[i % PIE_COLORS.size])
-                        }
-                        Text(
-                            "${seg.categoryName} ${(seg.fraction * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
+                Canvas(modifier = Modifier.size(6.dp)) { drawCircle(barColor) }
+                Text(
+                    seg.categoryName,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            // 長條圖
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(7.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(trackColor),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(seg.fraction.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(barColor),
+                )
             }
             Spacer(Modifier.width(8.dp))
-            // 最大類別金額
-            Column(horizontalAlignment = Alignment.End) {
-                breakdown.take(3).forEachIndexed { i, seg ->
-                    Text(
-                        "NT$${amountFormat.format(seg.amount)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PIE_COLORS[i % PIE_COLORS.size],
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
+            // 比例
+            Text(
+                "${(seg.fraction * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.width(32.dp),
+                textAlign = TextAlign.End,
+            )
+            Spacer(Modifier.width(4.dp))
+            // 金額
+            Text(
+                "NT$${amountFormat.format(seg.amount)}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.width(80.dp),
+                textAlign = TextAlign.End,
+            )
         }
     }
 }
