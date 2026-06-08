@@ -3,6 +3,7 @@ package com.moneykeeper.app.data.notification
 import com.moneykeeper.app.data.notification.parser.CathayParser
 import com.moneykeeper.app.data.notification.parser.CTBCParser
 import com.moneykeeper.app.data.notification.parser.GenericBankParser
+import com.moneykeeper.app.data.notification.parser.IncomeParser
 import com.moneykeeper.app.data.notification.parser.LineBankParser
 import com.moneykeeper.app.data.notification.parser.LinePayParser
 import com.moneykeeper.app.data.notification.parser.NotificationParserStrategy
@@ -31,12 +32,13 @@ class ParserRegistry @Inject constructor(
 ) {
 
     private val parsers: List<NotificationParserStrategy> = listOf(
-        TransferParser(),      // first — intercepts transfers before expense parsers
+        IncomeParser(),        // first — explicit income keywords win before transfer detection
+        TransferParser(),      // second — intercepts outgoing transfers
         LinePayParser(),
         LineBankParser(),
         CathayParser(),
         CTBCParser(),
-        GenericBankParser(),   // last — broad fallback
+        GenericBankParser(),   // last — broad expense fallback
     )
 
     fun parse(packageName: String, title: String, text: String): ParseResult {
@@ -66,7 +68,7 @@ class ParserRegistry @Inject constructor(
                     val updatedEvent = event.copy(confidence = breakdown.normalized)
                     val status = statusFromScore(breakdown.score, hasAmount = true)
 
-                    trace.appendLine("✓ ${parser.name}: amount=${event.amount}, merchant=${event.merchant}")
+                    trace.appendLine("✓ ${parser.name}: amount=${event.amount}, merchant=${event.merchant}, type=${event.transactionType}")
                     trace.appendLine(breakdown.format())
                     appendKeywordTrace(trace, keywords)
                     appendUserPatternTrace(trace, combined)
@@ -279,10 +281,18 @@ class ParserRegistry @Inject constructor(
             .distinct()
 
     companion object {
-        const val PARSE_VERSION = 3   // bump: rich signals + user pattern integration
+        const val PARSE_VERSION = 4   // bump: income detection via IncomeParser
 
-        private val STRONG_KEYWORDS   = listOf("消費", "刷卡", "扣款", "付款")
-        private val WEAK_KEYWORDS     = listOf("交易", "帳單", "餘額", "入帳", "ATM", "NT$")
-        private val TRANSFER_KEYWORDS = listOf("轉帳", "轉入", "轉出", "薪資", "退款", "代扣", "代繳")
+        private val STRONG_KEYWORDS = listOf(
+            // Expense
+            "消費", "刷卡", "扣款", "付款",
+            // Income
+            "入帳", "薪資", "退款", "股利", "配息", "收款", "利息",
+        )
+        private val WEAK_KEYWORDS = listOf(
+            "交易", "帳單", "餘額", "ATM", "NT$",
+            "存入", "匯入",
+        )
+        private val TRANSFER_KEYWORDS = listOf("轉帳", "轉入", "轉出", "代扣", "代繳")
     }
 }

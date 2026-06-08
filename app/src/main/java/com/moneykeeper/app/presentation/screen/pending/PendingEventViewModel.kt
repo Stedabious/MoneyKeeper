@@ -9,6 +9,7 @@ import com.moneykeeper.app.domain.model.Category
 import com.moneykeeper.app.domain.model.PendingEvent
 import com.moneykeeper.app.domain.model.Transaction
 import com.moneykeeper.app.domain.model.TransactionSource
+import com.moneykeeper.app.domain.model.TransactionType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +34,9 @@ class PendingEventViewModel @Inject constructor(
     val expenseCategories: StateFlow<List<Category>> = categoryRepository.getByType("EXPENSE")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val incomeCategories: StateFlow<List<Category>> = categoryRepository.getByType("INCOME")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun confirm(event: PendingEvent, categoryId: Long) {
         val amount = event.amount ?: return
         viewModelScope.launch {
@@ -43,6 +47,7 @@ class PendingEventViewModel @Inject constructor(
                     categoryId = categoryId,
                     merchant = event.merchant ?: "",
                     source = TransactionSource.NOTIFICATION,
+                    transactionType = event.transactionType,
                     transactionDate = event.eventTime,
                 )
             )

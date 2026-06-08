@@ -10,4 +10,5 @@ data class ParsedEvent(
     val sourcePackage: String,
     val timestamp: Long = System.currentTimeMillis(),
     val eventSource: EventSource = EventSource.REAL_NOTIFICATION,
+    val transactionType: TransactionType = TransactionType.EXPENSE,
 )

@@ -11,6 +11,7 @@ data class PendingEvent(
     val sourcePackage: String?,
     val status: PendingEventStatus,
     val eventSource: EventSource = EventSource.REAL_NOTIFICATION,
+    val transactionType: TransactionType = TransactionType.EXPENSE,
     val eventTime: Long,
     val createdAt: Long = System.currentTimeMillis(),
 )

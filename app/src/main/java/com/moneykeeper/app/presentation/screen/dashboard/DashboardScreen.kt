@@ -4,7 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -181,9 +181,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.4f)
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // 月份標題列
                 Row(
@@ -214,40 +212,11 @@ fun DashboardScreen(
                     }
                 }
 
-                // 收支摘要卡片
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column {
-                            Text("支出", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                            Text(
-                                "-NT$ ${amountFormat.format(state.monthlyExpense)}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD32F2F),
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("收入", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                            Text(
-                                "+NT$ ${amountFormat.format(state.monthlyIncome)}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2E7D32),
-                            )
-                        }
-                    }
-                }
-
-                // 橫向長條圖
+                // 橫向長條圖（填滿剩餘空間）
                 if (state.categoryBreakdown.isNotEmpty() || state.incomeCategoryBreakdown.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
                     CategoryBarChart(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         expenseBreakdown = state.categoryBreakdown,
                         incomeBreakdown = state.incomeCategoryBreakdown,
                         monthlyExpense = state.monthlyExpense,
@@ -402,54 +371,77 @@ private fun CategoryBarChart(
     monthlyExpense: Double,
     monthlyIncome: Double,
     amountFormat: NumberFormat,
+    modifier: Modifier = Modifier,
 ) {
+    val hasBoth = expenseBreakdown.isNotEmpty() && incomeBreakdown.isNotEmpty()
+    val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
+
+            // 支出 section
             if (expenseBreakdown.isNotEmpty()) {
-                BarSection(
+                BarTotalRow(
                     label = "支出",
                     total = monthlyExpense,
-                    breakdown = expenseBreakdown,
-                    sectionColor = Color(0xFFD32F2F),
                     sign = "−",
+                    color = Color(0xFFD32F2F),
                     amountFormat = amountFormat,
                 )
+                Spacer(Modifier.height(3.dp))
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(bottom = 4.dp),
+                ) {
+                    items(expenseBreakdown.size) { i ->
+                        BarCategoryRow(expenseBreakdown[i], PIE_COLORS[i % PIE_COLORS.size], trackColor, amountFormat)
+                    }
+                }
             }
-            if (expenseBreakdown.isNotEmpty() && incomeBreakdown.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
+
+            if (hasBoth) {
+                Spacer(Modifier.height(6.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(6.dp))
             }
+
+            // 收入 section
             if (incomeBreakdown.isNotEmpty()) {
-                BarSection(
+                BarTotalRow(
                     label = "收入",
                     total = monthlyIncome,
-                    breakdown = incomeBreakdown,
-                    sectionColor = Color(0xFF2E7D32),
                     sign = "+",
+                    color = Color(0xFF2E7D32),
                     amountFormat = amountFormat,
                 )
+                Spacer(Modifier.height(3.dp))
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(bottom = 4.dp),
+                ) {
+                    items(incomeBreakdown.size) { i ->
+                        BarCategoryRow(incomeBreakdown[i], PIE_COLORS[i % PIE_COLORS.size], trackColor, amountFormat)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BarSection(
+private fun BarTotalRow(
     label: String,
     total: Double,
-    breakdown: List<CategoryBreakdown>,
-    sectionColor: Color,
     sign: String,
+    color: Color,
     amountFormat: NumberFormat,
 ) {
-    val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
-
-    // 總和列（第一排）
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -458,7 +450,7 @@ private fun BarSection(
             label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = sectionColor,
+            color = color,
             modifier = Modifier.width(64.dp),
         )
         Spacer(Modifier.width(6.dp))
@@ -467,7 +459,7 @@ private fun BarSection(
                 .weight(1f)
                 .height(7.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(sectionColor),
+                .background(color),
         )
         Spacer(Modifier.width(8.dp))
         Text(
@@ -482,71 +474,68 @@ private fun BarSection(
             "$sign NT$${amountFormat.format(total)}",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = sectionColor,
+            color = color,
             modifier = Modifier.width(80.dp),
             textAlign = TextAlign.End,
         )
     }
+}
 
-    Spacer(Modifier.height(5.dp))
-
-    // 各類別列
-    breakdown.forEachIndexed { i, seg ->
-        val barColor = PIE_COLORS[i % PIE_COLORS.size]
-        Spacer(Modifier.height(4.dp))
+@Composable
+private fun BarCategoryRow(
+    seg: CategoryBreakdown,
+    barColor: Color,
+    trackColor: Color,
+    amountFormat: NumberFormat,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.width(64.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            // 色點 + 類別名稱
-            Row(
-                modifier = Modifier.width(64.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Canvas(modifier = Modifier.size(6.dp)) { drawCircle(barColor) }
-                Text(
-                    seg.categoryName,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(6.dp))
-            // 長條圖
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(trackColor),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(seg.fraction.coerceIn(0f, 1f))
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(barColor),
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            // 比例
+            Canvas(modifier = Modifier.size(6.dp)) { drawCircle(barColor) }
             Text(
-                "${(seg.fraction * 100).toInt()}%",
+                seg.categoryName,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.width(32.dp),
-                textAlign = TextAlign.End,
-            )
-            Spacer(Modifier.width(4.dp))
-            // 金額
-            Text(
-                "NT$${amountFormat.format(seg.amount)}",
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.width(80.dp),
-                textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(7.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(trackColor),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(seg.fraction.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(barColor),
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "${(seg.fraction * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.width(32.dp),
+            textAlign = TextAlign.End,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            "NT$${amountFormat.format(seg.amount)}",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.width(80.dp),
+            textAlign = TextAlign.End,
+        )
     }
 }
 

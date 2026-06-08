@@ -30,6 +30,7 @@ class PendingEventRepository @Inject constructor(private val dao: PendingEventDa
             sourcePackage = parsed.sourcePackage,
             status = PendingEventStatus.PENDING,
             eventSource = parsed.eventSource,
+            transactionType = parsed.transactionType,
             eventTime = parsed.timestamp,
         )
         return dao.insert(event.toEntity())

@@ -8,8 +8,14 @@ class RelevanceFilter @Inject constructor(
     private val registry: NotificationSourceRegistry,
 ) {
     private val financialKeywords = listOf(
+        // Expense
         "消費", "刷卡", "扣款", "付款", "轉帳", "交易", "帳單", "餘額",
-        "入帳", "ATM", "NT$", "NTD", "信用卡", "簽帳", "扣繳",
+        "ATM", "NT$", "NTD", "信用卡", "簽帳", "扣繳",
+        // Income
+        "入帳", "存入", "匯入", "收款", "薪資", "薪水",
+        "退款", "退費", "現金回饋", "回饋金",
+        "股利", "配息", "股息", "利息",
+        "獎金", "補助",
     )
 
     fun filter(packageName: String, title: String, text: String): FilterResult {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -34,6 +35,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -46,14 +48,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moneykeeper.app.domain.model.Category
 import com.moneykeeper.app.domain.model.PendingEvent
+import com.moneykeeper.app.domain.model.TransactionType
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private val ExpenseColor = Color(0xFFD32F2F)
+private val IncomeColor  = Color(0xFF2E7D32)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +69,8 @@ fun PendingEventScreen(
     viewModel: PendingEventViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val categories by viewModel.expenseCategories.collectAsStateWithLifecycle()
+    val expenseCategories by viewModel.expenseCategories.collectAsStateWithLifecycle()
+    val incomeCategories  by viewModel.incomeCategories.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -90,6 +98,8 @@ fun PendingEventScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(state.events, key = { it.id }) { event ->
+                    val isIncome = event.transactionType == TransactionType.INCOME
+                    val categories = if (isIncome) incomeCategories else expenseCategories
                     PendingEventCard(
                         event = event,
                         categories = categories,
@@ -111,34 +121,60 @@ private fun PendingEventCard(
 ) {
     val amountFormat = NumberFormat.getNumberInstance(Locale.US)
     val dateFormat = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
-    var selectedCategoryId by remember(event.id) { mutableStateOf(event.categoryId ?: 8L) }
+    val isIncome = event.transactionType == TransactionType.INCOME
+    val accentColor = if (isIncome) IncomeColor else ExpenseColor
+    val defaultCategoryId = event.categoryId ?: if (isIncome) 14L else 8L
+    var selectedCategoryId by remember(event.id) { mutableStateOf(defaultCategoryId) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
+
+            // 頂部列：類型徽章 + 時間
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = accentColor.copy(alpha = 0.12f),
+                ) {
+                    Text(
+                        text = if (isIncome) "收入" else "支出",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+                Text(
+                    dateFormat.format(Date(event.eventTime)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
             // 商家 + 金額
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        event.merchant ?: "未知商家",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        dateFormat.format(Date(event.eventTime)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
+                Text(
+                    event.merchant ?: if (isIncome) "收入通知" else "未知商家",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
                 if (event.amount != null) {
                     Text(
-                        "NT$ ${amountFormat.format(event.amount)}",
+                        text = "${if (isIncome) "+" else "−"}NT$ ${amountFormat.format(event.amount)}",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.error,
+                        color = accentColor,
                         fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
                     )
                 }
             }
@@ -149,6 +185,7 @@ private fun PendingEventCard(
             LinearProgressIndicator(
                 progress = { event.confidence },
                 modifier = Modifier.fillMaxWidth(),
+                color = accentColor,
             )
             Text(
                 "辨識信心度 ${(event.confidence * 100).toInt()}%",
@@ -197,10 +234,11 @@ private fun PendingEventCard(
                 Button(
                     onClick = { onConfirm(selectedCategoryId) },
                     modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("確認記帳")
+                    Text(if (isIncome) "確認收入" else "確認支出")
                 }
             }
         }

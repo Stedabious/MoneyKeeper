@@ -5,6 +5,7 @@ import androidx.room.PrimaryKey
 import com.moneykeeper.app.domain.model.EventSource
 import com.moneykeeper.app.domain.model.PendingEvent
 import com.moneykeeper.app.domain.model.PendingEventStatus
+import com.moneykeeper.app.domain.model.TransactionType
 
 @Entity(tableName = "pending_events")
 data class PendingEventEntity(
@@ -18,6 +19,7 @@ data class PendingEventEntity(
     val sourcePackage: String?,
     val status: String = "PENDING",
     val eventSource: String = EventSource.REAL_NOTIFICATION.name,
+    val transactionType: String = "EXPENSE",
     val eventTime: Long,
     val createdAt: Long,
 )
@@ -33,6 +35,7 @@ fun PendingEventEntity.toDomain() = PendingEvent(
     sourcePackage = sourcePackage,
     status = PendingEventStatus.valueOf(status),
     eventSource = EventSource.fromName(eventSource),
+    transactionType = runCatching { TransactionType.valueOf(transactionType) }.getOrDefault(TransactionType.EXPENSE),
     eventTime = eventTime,
     createdAt = createdAt,
 )
@@ -48,6 +51,7 @@ fun PendingEvent.toEntity() = PendingEventEntity(
     sourcePackage = sourcePackage,
     status = status.name,
     eventSource = eventSource.name,
+    transactionType = transactionType.name,
     eventTime = eventTime,
     createdAt = if (id == 0L) System.currentTimeMillis() else createdAt,
 )

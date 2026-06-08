@@ -23,7 +23,7 @@ import com.moneykeeper.app.data.database.entity.TransactionEntity
         NotificationLogEntity::class,
         RegexPatternEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,6 +34,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun regexPatternDao(): RegexPatternDao
 
     companion object {
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pending_events ADD COLUMN transactionType TEXT NOT NULL DEFAULT 'EXPENSE'")
+            }
+        }
+
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE categories ADD COLUMN categoryType TEXT NOT NULL DEFAULT 'EXPENSE'")
