@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -197,8 +200,8 @@ fun AddTransactionScreen(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     OutlinedTextField(
                         value = state.merchant,
@@ -210,7 +213,7 @@ fun AddTransactionScreen(
                     )
 
                     // 類別
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(
                             "類別",
                             style = MaterialTheme.typography.labelLarge,
@@ -227,46 +230,85 @@ fun AddTransactionScreen(
                         }
                     }
 
-                    // 日期
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable { showDatePicker = true }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                    // 日期 + 備注（緊湊卡片，不需要滑動）
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
                     ) {
+                        // 日期列
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDatePicker = true }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(20.dp),
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    "日期",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            Text(
+                                dateFormat.format(Date(state.transactionDate)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = amountColor,
+                                fontWeight = FontWeight.Medium,
                             )
-                            Text("日期", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline)
                         }
-                        Text(
-                            dateFormat.format(Date(state.transactionDate)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = amountColor,
-                            fontWeight = FontWeight.Medium,
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 14.dp),
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                        )
+                        // 備注列
+                        BasicTextField(
+                            value = state.note,
+                            onValueChange = viewModel::onNoteChanged,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { inner ->
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        "備注",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.width(28.dp),
+                                    )
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        if (state.note.isEmpty()) {
+                                            Text(
+                                                "選填",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                            )
+                                        }
+                                        inner()
+                                    }
+                                }
+                            },
                         )
                     }
-
-                    HorizontalDivider()
-
-                    // 備注（置底）
-                    OutlinedTextField(
-                        value = state.note,
-                        onValueChange = viewModel::onNoteChanged,
-                        label = { Text("備注（選填）") },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
 
                 // ── 數字鍵盤（畫面 28%）──────────────────────────────────
