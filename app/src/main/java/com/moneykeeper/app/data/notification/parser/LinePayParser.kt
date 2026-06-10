@@ -8,7 +8,7 @@ class LinePayParser : NotificationParserStrategy {
 
     override fun canHandle(packageName: String, title: String, text: String): Boolean =
         packageName == "jp.naver.line.android" &&
-            (title.contains("LINE Pay") || text.contains("付款成功") || text.contains("付款完成"))
+            title.contains("LINE Pay")
 
     override fun parse(packageName: String, title: String, text: String): ParsedEvent? {
         val combined = "$title $text"
